@@ -1,0 +1,3 @@
+.bsp/
+**/target/*
+!**/target/src_managed/
