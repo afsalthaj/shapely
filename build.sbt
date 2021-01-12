@@ -1,9 +1,8 @@
 organization := "com.fommil"
 name := "shapely"
 
-// TODO 2.11 and 2.12
-crossScalaVersions in ThisBuild := Seq("2.13.4", "3.0.0-M3")
-scalaVersion in ThisBuild := crossScalaVersions.value.head
+crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.12", "2.13.4", "3.0.0-M3")
+scalaVersion in ThisBuild := "2.12.12"
 scalacOptions ++= Seq(
   "-deprecation",
   "-feature"
@@ -61,8 +60,6 @@ sourceGenerators in Compile += Def.task {
     file,
     s"""package shapely
        |
-       |trait CaseClass[A]
-       |
        |final case class CaseClass0[A]() extends CaseClass[A] { def tuple: Unit = () }
        |case object CaseClass0 { def untuple[A](): CaseClass0[A] = apply[A]() }
        |
@@ -74,7 +71,7 @@ sourceGenerators in Compile += Def.task {
 sourceGenerators in Compile += Def.task {
   val dir = (sourceManaged in Compile).value
   val file = dir / "shapely" / "SealedTrait.scala"
-  val sealedtraits = (1 to 64).map { i =>
+  val sealedtraits = (1 to 32).map { i =>
     val tparams = (1 to i).map(p => s"A$p <: A").mkString(", ")
     val tparams_ = (1 to i).map(p => s"A$p").mkString(", ")
     val defns = (1 to i).map(p => s"final case class _$p[A, $tparams](value: A$p) extends SealedTrait$i[A, $tparams_]").mkString("\n  ")
@@ -92,13 +89,16 @@ sourceGenerators in Compile += Def.task {
        |    ${toEithers}
        |  }
        |}""".stripMargin
-    val body_object =
+    val uneither =
       if (i > 12) ""
       else s"""
-       |object SealedTrait$i {
        |  def uneither[A, $tparams](e: $either): SealedTrait$i[A, $tparams_] = e match {
        |    ${fromEithers}
        |  }
+       |""".stripMargin
+    val body_object = s"""
+       |object SealedTrait$i {
+       |  $uneither
        |  $defns
        |}""".stripMargin
 
@@ -107,8 +107,6 @@ sourceGenerators in Compile += Def.task {
   IO.write(
     file,
     s"""package shapely
-       |
-       |trait SealedTrait[A] { def value: A }
        |
        |${sealedtraits.mkString("\n\n")}
        |""".stripMargin)
@@ -132,7 +130,7 @@ sourceGenerators in Compile += Def.task {
          |    def from(s: CaseClass$i[A, $tparams, $lparams_]): A = A.fromProduct(s)
          |  }""".stripMargin
     }
-    val sealedtraits = (1 to 64).map { i =>
+    val sealedtraits = (1 to 32).map { i =>
       val tparams = (1 to i).map(p => s"A$p <: A").mkString(", ")
       val tparams_ = (1 to i).map(p => s"A$p").mkString(", ")
       def tcons(i: String) = if (i == 1) s"Tuple1[$i]" else s"($i)"

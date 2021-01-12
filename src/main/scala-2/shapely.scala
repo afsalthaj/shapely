@@ -4,8 +4,8 @@ package scala {
   trait ShapelyCompat {
     this: Shapely.type =>
 
-    implicit def genCaseClass[A, B <: shapely.CaseClass[A]]: Shapely[A, B] = macro shapely.Macro.genCaseClass[A, B]
-    implicit def genSealedTrait[A, B <: shapely.SealedTrait[A]]: Shapely[A, B] = macro shapely.Macro.genSealedTrait[A, B]
+    implicit def genCaseClass[A <: Product, B]: Shapely[A, B] = macro shapely.Macro.genCaseClass[A]
+    implicit def genSealedTrait[A, B]: Shapely[A, B] = macro shapely.Macro.genSealedTrait[A]
   }
 }
 
@@ -13,7 +13,7 @@ package shapely {
   object Macro {
     import scala.reflect.macros.whitebox.Context
 
-    def genCaseClass[A: c.WeakTypeTag, B: c.WeakTypeTag](c: Context): c.Expr[Shapely[A, B]] = {
+    def genCaseClass[A: c.WeakTypeTag](c: Context): c.Tree = {
       import c.universe._
 
       val A = c.weakTypeOf[A]
@@ -37,7 +37,7 @@ package shapely {
         } else {
           val tcons = c.mirror.staticClass(s"_root_.shapely.CaseClass${fields.length}")
           val tparams = fields.map { m => m.typeSignatureIn(A).resultType }
-          val labels = fields.map { m => Literal(Constant(m.name.toString)) }
+          val labels = fields.map { m => internal.constantType(Constant(m.name.decodedName.toString.trim)) }
           val B = tq"$tcons[$A , ..$tparams, ..$labels]"
           val to_getters = fields.map { f => q"a.${f.name.toTermName}" }
           val from_getters = (1 to fields.length).map { i =>
@@ -53,10 +53,10 @@ package shapely {
 
       //println(result)
       //println(scala.util.Try(c.typecheck(result)))
-      c.Expr(result)
+      result
     }
 
-    def genSealedTrait[A: c.WeakTypeTag, B: c.WeakTypeTag](c: Context): c.Expr[Shapely[A, B]] = {
+    def genSealedTrait[A: c.WeakTypeTag](c: Context): c.Tree = {
       import c.universe._
 
       val A = c.weakTypeOf[A]
@@ -114,7 +114,7 @@ package shapely {
 
       //println(result)
       //println(scala.util.Try(c.typecheck(result)))
-      c.Expr(result)
+      result
     }
   }
 }

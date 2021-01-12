@@ -1,7 +1,5 @@
 package shapely
 
-trait CaseClass[A]
-
 final case class CaseClass0[A]() extends CaseClass[A] { def tuple: Unit = () }
 case object CaseClass0 { def untuple[A](): CaseClass0[A] = apply[A]() }
 
