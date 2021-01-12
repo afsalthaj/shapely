@@ -1,14 +1,17 @@
 package shapely
 
-sealed trait Gaz
-case class Foo(s: String) extends Gaz
-case class Bar(txt: String, num: Long) extends Gaz
-case class Baz() extends Gaz
-case object Car extends Gaz
+object ShapelyTestExamples {
+  sealed trait Gaz
+  case class Foo(s: String) extends Gaz
+  case class Bar(txt: String, num: Long) extends Gaz
+  case class Baz() extends Gaz
+  case object Car extends Gaz
 
-sealed trait Poly[+A]
-case class PolyFoo(s: String, i: Int) extends Poly[Int]
-case class PolyBar() extends Poly[Unit]
+  sealed trait Poly[+A]
+  case class PolyFoo(s: String, i: Int) extends Poly[Int]
+  case class PolyBar() extends Poly[Unit]
+}
+import ShapelyTestExamples._
 
 class ShapelyTest extends junit.framework.TestCase {
 

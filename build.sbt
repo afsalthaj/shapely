@@ -9,10 +9,14 @@ scalacOptions ++= Seq(
 )
 scalacOptions in (Compile, console) -= "-Ywarn-unused"
 
-unmanagedSourceDirectories in Compile += {
+unmanagedSourceDirectories in Compile ++= {
   val dir = (scalaSource in Compile).value
-  val Some((major, _)) = CrossVersion.partialVersion(scalaVersion.value)
-  file(s"${dir.getPath}-$major")
+  val Some((major, minor)) = CrossVersion.partialVersion(scalaVersion.value)
+  val specific =
+    if (major == 2 && minor <= 12) file(s"${dir.getPath}-2.12-") :: Nil
+    else Nil
+
+  file(s"${dir.getPath}-$major") :: specific
 }
 
 libraryDependencies ++= Seq(
