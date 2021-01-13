@@ -1,8 +1,11 @@
 organization := "com.fommil"
 name := "shapely"
 
-crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.12", "2.13.4", "3.0.0-M3")
-scalaVersion in ThisBuild := "2.12.12"
+val product_arity = 64
+val sum_arity = 64
+
+crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.13", "2.13.4", "3.0.0-M3")
+scalaVersion in ThisBuild := crossScalaVersions.value(2)
 scalacOptions ++= Seq(
   "-deprecation",
   "-feature"
@@ -42,8 +45,8 @@ sourceManaged in Compile := {
 
 sourceGenerators in Compile += Def.task {
   val dir = (sourceManaged in Compile).value
-  val file = dir / "shapely" / "CaseClass.scala"
-  val caseclasses = (1 to 64).map { i =>
+  val file = dir / "shapely" / "data.scala"
+  val caseclasses = (1 to product_arity).map { i =>
     val tparams = (1 to i).map(p => s"A$p").mkString(", ")
     val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
     val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
@@ -60,57 +63,57 @@ sourceGenerators in Compile += Def.task {
       else s"object CaseClass$i { def untuple[A, $tparams, $lparams](t: Tuple$i[$tparams]): CaseClass$i[A, $tparams, $lparams_] = CaseClass$i($untuple) }"
     s"final case class CaseClass$i[A, $tparams, $lparams]($defns) extends CaseClass[A]$body_class$body_object"
   }
+  val sealedtraits = (1 to sum_arity).map { i =>
+    val tparams = (1 to i).map(p => s"A$p <: A").mkString(", ")
+    val tparams_ = (1 to i).map(p => s"A$p").mkString(", ")
+    val either = (1 until i).foldRight(s"A$i" + ("]" * (i - 1)))((e, acc) => s"Either[A$e, $acc")
+    def rights(pp: Int, s: String): String = if (pp <= 0) s else rights(pp - 1, s"Right($s)")
+    def either_cons(p: Int, splice: String): String = if (p == i) rights(p - 1, splice) else rights(p - 1, s"Left($splice)")
+    val toEithers = (1 to i).map { p => s"""case SealedTrait._$p(v) => ${either_cons(p, "v")}""" }
+    val fromEithers = (1 to i).map { p => s"""case ${either_cons(p, s"v")} => SealedTrait._$p(v)""" }
+
+    // the either convertors are very inefficient and should only be used for small arity
+    val body_object =
+      if (i > 12) ""
+      else s"""
+       |object SealedTrait$i {
+       |  def either[A, $tparams](st: SealedTrait$i[A, $tparams_]): $either = st match {
+       |    ${toEithers.mkString("\n    ")}
+       |  }
+       |
+       |  def uneither[A, $tparams](e: $either): SealedTrait$i[A, $tparams_] = e match {
+       |    ${fromEithers.mkString("\n    ")}
+       |  }
+       |}""".stripMargin
+
+    s"sealed trait SealedTrait$i[A, $tparams] extends SealedTrait[A]$body_object"
+  }
+  // this encoding idea thanks to Georgi Krastev
+  val sealedtrait_cases = (1 to sum_arity).map { i =>
+    val tparams = (1 to sum_arity).map(p => s"A$p <: A").mkString(", ")
+    val tparams_ = (1 to sum_arity).map(p => s"A$p")
+    val parents = (i to sum_arity).map { p =>
+      val ptparams = tparams_.take(p).mkString(", ")
+      s"""SealedTrait$p[A, $ptparams]"""
+    }.mkString(" with ")
+    s"  final case class _$i[A, $tparams](value: A$i) extends $parents"
+  }
   IO.write(
     file,
     s"""package shapely
+       |
+       |sealed trait Shape[A]
+       |sealed trait CaseClass[A] extends Shape[A]
+       |sealed trait SealedTrait[A] extends Shape[A] { def value: A }
        |
        |final case class CaseClass0[A]() extends CaseClass[A] { def tuple: Unit = () }
        |case object CaseClass0 { def untuple[A](): CaseClass0[A] = apply[A]() }
        |
        |${caseclasses.mkString("\n\n")}
-       |""".stripMargin)
-  Seq(file)
-}.taskValue
-
-sourceGenerators in Compile += Def.task {
-  val dir = (sourceManaged in Compile).value
-  val file = dir / "shapely" / "SealedTrait.scala"
-  val sealedtraits = (1 to 32).map { i =>
-    val tparams = (1 to i).map(p => s"A$p <: A").mkString(", ")
-    val tparams_ = (1 to i).map(p => s"A$p").mkString(", ")
-    val defns = (1 to i).map(p => s"final case class _$p[A, $tparams](value: A$p) extends SealedTrait$i[A, $tparams_]").mkString("\n  ")
-    val either = (1 until i).foldRight(s"A$i" + ("]" * (i - 1)))((e, acc) => s"Either[A$e, $acc")
-    def rights(pp: Int, s: String): String = if (pp <= 0) s else rights(pp - 1, s"Right($s)")
-    def either_cons(p: Int, splice: String): String = if (p == i) rights(p - 1, splice) else rights(p - 1, s"Left($splice)")
-    val toEithers = (1 to i).map { p => s"""case SealedTrait$i._$p(v) => ${either_cons(p, "v")}""" }.mkString("\n    ")
-    val fromEithers = (1 to i).map { p => s"""case ${either_cons(p, "v")} => _$p(v)""" }.mkString("\n    ")
-
-    // the either convertors are very inefficient and should only be used for small arity
-    val body_class =
-      if (i > 12) ""
-      else s""" {
-       |  def either: $either = this match {
-       |    ${toEithers}
-       |  }
-       |}""".stripMargin
-    val uneither =
-      if (i > 12) ""
-      else s"""
-       |  def uneither[A, $tparams](e: $either): SealedTrait$i[A, $tparams_] = e match {
-       |    ${fromEithers}
-       |  }
-       |""".stripMargin
-    val body_object = s"""
-       |object SealedTrait$i {
-       |  $uneither
-       |  $defns
-       |}""".stripMargin
-
-    s"sealed trait SealedTrait$i[A, $tparams] extends SealedTrait[A]$body_class$body_object"
-  }
-  IO.write(
-    file,
-    s"""package shapely
+       |
+       |object SealedTrait {
+       |${sealedtrait_cases.mkString("\n")}
+       |}
        |
        |${sealedtraits.mkString("\n\n")}
        |""".stripMargin)
@@ -122,8 +125,8 @@ sourceGenerators in Compile += Def.task {
   if (major < 3) Nil
   else {
     val dir = (sourceManaged in Compile).value
-    val file = dir / "scala" / "ShapelyCompat.scala"
-    val caseclasses = (1 to 64).map { i =>
+    val file = dir / "scala" / "compat.scala"
+    val caseclasses = (1 to product_arity).map { i =>
       val tparams = (1 to i).map(p => s"A$p").mkString(", ")
       val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
       val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
@@ -134,12 +137,12 @@ sourceGenerators in Compile += Def.task {
          |    def from(s: CaseClass$i[A, $tparams, $lparams_]): A = A.fromProduct(s)
          |  }""".stripMargin
     }
-    val sealedtraits = (1 to 32).map { i =>
+    val sealedtraits = (1 to sum_arity).map { i =>
       val tparams = (1 to i).map(p => s"A$p <: A").mkString(", ")
       val tparams_ = (1 to i).map(p => s"A$p").mkString(", ")
       def tcons(i: String) = if (i == 1) s"Tuple1[$i]" else s"($i)"
 
-      val to_matchers = (1 to i).map(p => s"  case ${p - 1} => SealedTrait$i._$p(a.asInstanceOf[A$p])")
+      val to_matchers = (1 to i).map(p => s"  case ${p - 1} => SealedTrait._$p(a.asInstanceOf[A$p])")
 
       s"""  implicit def sealedtrait$i[A, $tparams](implicit A: Mirror.SumOf[A], ev: A.MirroredElemTypes =:= ${tcons(tparams_)}): Shapely[A, SealedTrait$i[A, $tparams_]] = new Shapely[A, SealedTrait$i[A, $tparams_]] {
          |    def to(a: A): SealedTrait$i[A, $tparams_] = A.ordinal(a) match {

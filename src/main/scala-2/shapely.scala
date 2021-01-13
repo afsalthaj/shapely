@@ -96,13 +96,13 @@ package shapely {
 
       val to_matchers = parts.zipWithIndex.map {
         case (tp, i) =>
-          val cons = c.mirror.staticClass(s"_root_.shapely.SealedTrait${parts.length}._${i + 1}")
+          val cons = c.mirror.staticClass(s"_root_.shapely.SealedTrait._${i + 1}")
           cq"p : $tp => ${cons.companion}.apply(p)"
       }
 
       val from_matchers = parts.zipWithIndex.map {
         case (_, i) =>
-          val uncons = c.mirror.staticClass(s"_root_.shapely.SealedTrait${parts.length}._${i + 1}")
+          val uncons = c.mirror.staticClass(s"_root_.shapely.SealedTrait._${i + 1}")
           cq"${uncons.companion}(p) => p"
       }
 
