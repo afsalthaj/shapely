@@ -15,6 +15,7 @@ package shapely {
   object ValueOfMacros {
     import scala.reflect.macros.whitebox.Context
 
+    // TODO support case objects and Int
     def gen[A: c.WeakTypeTag](c: Context): c.Tree = {
       import c.universe._
       val A = c.weakTypeOf[A]
