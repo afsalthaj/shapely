@@ -4,8 +4,7 @@ name := "shapely"
 val product_arity = 64
 val sum_arity = 64
 
-crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.13", "2.13.4", "3.0.0-M3")
-scalaVersion in ThisBuild := crossScalaVersions.value(2)
+crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.13", "2.13.4", "3.0.1")
 scalacOptions ++= Seq(
   "-deprecation",
   "-feature"
