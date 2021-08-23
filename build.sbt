@@ -1,5 +1,8 @@
 organization := "com.fommil"
+
 name := "shapely"
+
+version := "0.1.2"
 
 val product_arity = 64
 val sum_arity = 64
@@ -59,7 +62,8 @@ sourceGenerators in Compile += Def.task {
       else s" with Product${i}[$tparams] { def tuple: Tuple${i}[$tparams] = Tuple$i($tuple) }\n"
     val body_object =
       if (i > 22) ""
-      else s"object CaseClass$i { def untuple[A, $tparams, $lparams](t: Tuple$i[$tparams]): CaseClass$i[A, $tparams, $lparams_] = CaseClass$i($untuple) }"
+      else s"object CaseClass$i {def untuple[A, $tparams, $lparams](t: Tuple$i[$tparams]): CaseClass$i[A, $tparams, $lparams_] = CaseClass$i($untuple) }"
+
     s"final case class CaseClass$i[A, $tparams, $lparams]($defns) extends CaseClass[A]$body_class$body_object"
   }
   val sealedtraits = (1 to sum_arity).map { i =>
@@ -120,11 +124,42 @@ sourceGenerators in Compile += Def.task {
 }.taskValue
 
 sourceGenerators in Compile += Def.task {
+  val dir = (sourceManaged in Compile).value
+  val fieldNamesFile = dir / "shapely" / "FieldNames.scala"
+
+  val fieldNameCaseClasses = (1 to product_arity).map { i =>
+    val tparams = (1 to i).map(p => s"A$p").mkString(", ")
+    val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
+    val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
+    val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
+    s"""implicit def fieldNamesOfCaseClass${i}[A, ${tparams}, ${lparams}](implicit ${valueParams}): FieldNames[CaseClass1[A, A1, L1]] = FieldNames.instance(List(${fieldNames}))"""
+  }
+
+    IO.write(
+      fieldNamesFile,
+      s"""package shapely
+         |
+         | 
+         |trait FieldNames[A] {
+         |  def fieldNames: List[String]
+         |}
+         |
+         |object FieldNames{
+         | def instance[A](list: List[String]): FieldNames[A] = new FieldNames[A] {
+         |   def fieldNames: List[String] = list
+         | }
+         |
+         |${fieldNameCaseClasses.mkString("\n\n")}
+         |}
+         """.stripMargin)  
+
   val Some((major, _)) = CrossVersion.partialVersion(scalaVersion.value)
+
   if (major < 3) Nil
   else {
     val dir = (sourceManaged in Compile).value
     val file = dir / "scala" / "compat.scala"
+
     val caseclasses = (1 to product_arity).map { i =>
       val tparams = (1 to i).map(p => s"A$p").mkString(", ")
       val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
@@ -169,7 +204,8 @@ sourceGenerators in Compile += Def.task {
          |${sealedtraits.mkString("\n\n")}
          |
          |}""".stripMargin)
-    Seq(file)
+
+    Seq(fieldNamesFile, file)
 
   }
 }.taskValue
