@@ -2,7 +2,7 @@ organization := "com.fommil"
 
 name := "shapely"
 
-version := "0.1.2"
+version := "0.1.3"
 
 val product_arity = 64
 val sum_arity = 64
@@ -130,9 +130,14 @@ sourceGenerators in Compile += Def.task {
   val fieldNameCaseClasses = (1 to product_arity).map { i =>
     val tparams = (1 to i).map(p => s"A$p").mkString(", ")
     val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
+    val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
     val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
     val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
-    s"""implicit def fieldNamesOfCaseClass${i}[A, ${tparams}, ${lparams}](implicit ${valueParams}): FieldNames[CaseClass1[A, A1, L1]] = FieldNames.instance(List(${fieldNames}))"""
+
+    s"""
+    |implicit def fieldNamesOfCaseClass${i}[A, ${tparams}, ${lparams}](implicit ${valueParams}): FieldNames[CaseClass$i[A, $tparams, $lparams_]] = {
+    |  FieldNames.instance(List(${fieldNames}))
+    }""".stripMargin
   }
 
     IO.write(
