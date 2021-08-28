@@ -1,6 +1,6 @@
 import scala.language.experimental.macros
 
-package scala {
+package shapely {
   trait ShapelyCompat {
     this: Shapely.type =>
 
