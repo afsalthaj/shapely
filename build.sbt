@@ -1,11 +1,13 @@
 organization := "com.fommil"
+
 name := "shapely"
+
+version := "0.1.3"
 
 val product_arity = 64
 val sum_arity = 64
 
-crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.13", "2.13.4", "3.0.0-M3")
-scalaVersion in ThisBuild := crossScalaVersions.value(2)
+crossScalaVersions in ThisBuild := Seq("2.11.12", "2.12.13", "2.13.4", "3.0.1")
 scalacOptions ++= Seq(
   "-deprecation",
   "-feature"
@@ -56,11 +58,12 @@ sourceGenerators in Compile += Def.task {
     // scala 2 is limited to tuples of arity 22. We could generate this for
     // scala 3 but we'd rather not have a different API.
     val body_class =
-      if (i > 22) ""
-      else s" with Product${i}[$tparams] { def tuple: Tuple${i}[$tparams] = Tuple$i($tuple) }\n"
+    if (i > 22) ""
+    else s" with Product${i}[$tparams] { def tuple: Tuple${i}[$tparams] = Tuple$i($tuple) }\n"
     val body_object =
       if (i > 22) ""
-      else s"object CaseClass$i { def untuple[A, $tparams, $lparams](t: Tuple$i[$tparams]): CaseClass$i[A, $tparams, $lparams_] = CaseClass$i($untuple) }"
+      else s"object CaseClass$i {def untuple[A, $tparams, $lparams](t: Tuple$i[$tparams]): CaseClass$i[A, $tparams, $lparams_] = CaseClass$i($untuple) }"
+
     s"final case class CaseClass$i[A, $tparams, $lparams]($defns) extends CaseClass[A]$body_class$body_object"
   }
   val sealedtraits = (1 to sum_arity).map { i =>
@@ -76,15 +79,15 @@ sourceGenerators in Compile += Def.task {
     val body_object =
       if (i > 12) ""
       else s"""
-       |object SealedTrait$i {
-       |  def either[A, $tparams](st: SealedTrait$i[A, $tparams_]): $either = st match {
-       |    ${toEithers.mkString("\n    ")}
-       |  }
-       |
-       |  def uneither[A, $tparams](e: $either): SealedTrait$i[A, $tparams_] = e match {
-       |    ${fromEithers.mkString("\n    ")}
-       |  }
-       |}""".stripMargin
+              |object SealedTrait$i {
+              |  def either[A, $tparams](st: SealedTrait$i[A, $tparams_]): $either = st match {
+              |    ${toEithers.mkString("\n    ")}
+              |  }
+              |
+              |  def uneither[A, $tparams](e: $either): SealedTrait$i[A, $tparams_] = e match {
+              |    ${fromEithers.mkString("\n    ")}
+              |  }
+              |}""".stripMargin
 
     s"sealed trait SealedTrait$i[A, $tparams] extends SealedTrait[A]$body_object"
   }
@@ -121,11 +124,48 @@ sourceGenerators in Compile += Def.task {
 }.taskValue
 
 sourceGenerators in Compile += Def.task {
+  val dir = (sourceManaged in Compile).value
+  val fieldNamesFile = dir / "shapely" / "FieldNames.scala"
+
+  val fieldNameCaseClasses = (1 to product_arity).map { i =>
+    val tparams = (1 to i).map(p => s"A$p").mkString(", ")
+    val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
+    val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
+    val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
+    val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
+
+    s"""
+       |  implicit def fieldNamesOfCaseClass${i}[A, ${tparams}, ${lparams}](implicit ${valueParams}): FieldNames[CaseClass$i[A, $tparams, $lparams_]] = {
+       |    FieldNames.instance(List(${fieldNames}))
+       |  }
+       |""".stripMargin
+  }
+
+  IO.write(
+    fieldNamesFile,
+    s"""package shapely
+       |
+       |
+       |trait FieldNames[A] {
+       |  def fieldNames: List[String]
+       |}
+       |
+       |object FieldNames {
+       |  def instance[A](list: List[String]): FieldNames[A] = new FieldNames[A] {
+       |    def fieldNames: List[String] = list
+       |  }
+       |
+       |${fieldNameCaseClasses.mkString("\n")}
+       |}
+         """.stripMargin)
+
   val Some((major, _)) = CrossVersion.partialVersion(scalaVersion.value)
+
   if (major < 3) Nil
   else {
     val dir = (sourceManaged in Compile).value
     val file = dir / "scala" / "compat.scala"
+
     val caseclasses = (1 to product_arity).map { i =>
       val tparams = (1 to i).map(p => s"A$p").mkString(", ")
       val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
@@ -170,7 +210,8 @@ sourceGenerators in Compile += Def.task {
          |${sealedtraits.mkString("\n\n")}
          |
          |}""".stripMargin)
-    Seq(file)
+
+    Seq(fieldNamesFile, file)
 
   }
 }.taskValue
