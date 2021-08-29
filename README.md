@@ -4,3 +4,5 @@ Fork of Sam Halliday's shapely, with necessary additions to support a super seam
 with the intent to push to zio-deriving/zio-json.
 
 Code is mostly generated in `build.sbt`, with most of the relevant typeclasses in `project/TypeClasses.scala`. They are `FieldNames`, `InvariantAp` and `Lazy`.
+
+Currently, the changes are focussed on Scala3.
