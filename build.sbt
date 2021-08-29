@@ -1,3 +1,5 @@
+import TypeClasses._
+
 organization := "com.fommil"
 
 name := "shapely"
@@ -127,44 +129,31 @@ sourceGenerators in Compile += Def.task {
   val dir = (sourceManaged in Compile).value
   val fieldNamesFile = dir / "shapely" / "FieldNames.scala"
 
-  val fieldNameCaseClasses = (1 to product_arity).map { i =>
-    val tparams = (1 to i).map(p => s"A$p").mkString(", ")
-    val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
-    val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
-    val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
-    val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
-
-    s"""
-       |  implicit def fieldNamesOfCaseClass${i}[A, ${tparams}, ${lparams}](implicit ${valueParams}): FieldNames[CaseClass$i[A, $tparams, $lparams_]] = {
-       |    FieldNames.instance(List(${fieldNames}))
-       |  }
-       |""".stripMargin
-  }
-
   IO.write(
     fieldNamesFile,
-    s"""package shapely
-       |
-       |
-       |trait FieldNames[A] {
-       |  def fieldNames: List[String]
-       |}
-       |
-       |object FieldNames {
-       |  def instance[A](list: List[String]): FieldNames[A] = new FieldNames[A] {
-       |    def fieldNames: List[String] = list
-       |  }
-       |
-       |${fieldNameCaseClasses.mkString("\n")}
-       |}
-         """.stripMargin)
+    FieldNames(product_arity)
+  )
+
+  val invariantApplicativeFunctorFile = dir / "shapely" / "InvariantApplicativeFunctor.scala"
+
+  IO.write(
+    invariantApplicativeFunctorFile,
+    InvariantApplicativeFunctor
+  )
+
+  val lazyFile = dir / "shapely" / "Lazy.scala"
+
+  IO.write(
+    lazyFile,
+    Lazy
+  )
 
   val Some((major, _)) = CrossVersion.partialVersion(scalaVersion.value)
 
   if (major < 3) Nil
   else {
     val dir = (sourceManaged in Compile).value
-    val file = dir / "scala" / "compat.scala"
+    val compatFile = dir / "scala" / "compat.scala"
 
     val caseclasses = (1 to product_arity).map { i =>
       val tparams = (1 to i).map(p => s"A$p").mkString(", ")
@@ -192,7 +181,7 @@ sourceGenerators in Compile += Def.task {
          |  }""".stripMargin
     }
     IO.write(
-      file,
+      compatFile,
       s"""package scala
          |
          |import deriving.Mirror
@@ -211,7 +200,7 @@ sourceGenerators in Compile += Def.task {
          |
          |}""".stripMargin)
 
-    Seq(fieldNamesFile, file)
+    Seq(fieldNamesFile, invariantApplicativeFunctorFile, lazyFile, compatFile)
 
   }
 }.taskValue
