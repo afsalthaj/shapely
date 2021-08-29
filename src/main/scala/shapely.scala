@@ -38,7 +38,10 @@ object example extends App {
     
     implicit val eqString: Equal[String] = (a: String, b: String) => a == b
     
-    implicit val eq: InvariantApplicativeFunctor[Equal] = new InvariantApplicativeFunctor[Equal] {
+  
+
+
+    implicit def eq: InvariantApplicativeFunctor[Equal] = new InvariantApplicativeFunctor[Equal] {
       override def pure[A](a: A): Equal[A] = instance(true)
       override def product1[A, B](f: A => B)(g: B => A)(fa: Equal[A]): Equal[B] =
         (a: B, b: B) => {
@@ -62,14 +65,23 @@ object example extends App {
     println(Shapely.generic[Strings](Strings("sdsd")))
 
     import Equal._
+    trait Lazy[F[_], A]{
+      def instance: F[A]
+    }
+
+    object Lazy {
+      def instance[F[_], A](fa: => F[A]) = new Lazy[F, A] {
+        def instance = fa
+      }
 
     // Derive any typeclass for CaseClass1
-    implicit def deriveAnyTypeClass[F[_], A, A1, L1 <: String](implicit f: InvariantApplicativeFunctor[F], ev: F[A1]): F[CaseClass1[A, A1, L1]] = 
-      f.product1[A1, CaseClass1[A, A1, L1]](CaseClass1[A, A1, L1](_))(_._1)(ev)
+     implicit def deriveAnyTypeClass[F[_], A, A1, L1 <: String](implicit f: InvariantApplicativeFunctor[F], ev: F[A1]): Lazy[F, CaseClass1[A, A1, L1]] = 
+       instance(f.product1[A1, CaseClass1[A, A1, L1]](CaseClass1(_))(_._1)(ev))
+    }
 
-      // Derive any typeclass for Shapely 
-     implicit def eqOfA[A, B](implicit ev: Shapely[A, B], ev2: Equal[B]): Equal[A] = new Equal[A] {
-       override def eq(b1: A, b2: A) = ev2.eq(ev.to(b1), ev.to(b2))
+      // Derive any typeclass for Shapely
+     implicit def eqOfA[A, B](implicit ev: Shapely[A, B], ev2: Lazy[Equal, B]): Equal[A] = new Equal[A] {
+       override def eq(b1: A, b2: A) = ev2.instance.eq(ev.to(b1), ev.to(b2))
      }
     
     println(implicitly[Equal[Strings]].eq(Strings("afsal"), Strings("afsal")))
