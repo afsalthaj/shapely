@@ -43,7 +43,23 @@ object TypeClasses {
        |""".stripMargin
   }
 
-  val Lazy: String = {
+  def Lazy(productArity: Int): String = {
+    // TODO: Generate all products in InvariantApplicativeFunctor
+    val lazyInstances = (1 to productArity).map { i =>
+      val tparams = (1 to i).map(p => s"A$p").mkString(", ")
+      val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
+      val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
+      val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
+      val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
+      val fEvidences = (1 to i).map(p => s"ev${p}: F[A${p}]")
+
+      s"""
+         |  implicit def deriveF1${i}[F[_], A, ${tparams}, ${lparams}](implicit f: InvariantApplicativeFunctor[F]): FieldNames[CaseClass$i[A, $tparams, $lparams_]] = {
+         |    FieldNames.instance(List(${fieldNames}))
+         |  }
+         |""".stripMargin
+    }
+    
     s"""
        |package shapely
        |
