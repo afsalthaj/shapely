@@ -74,19 +74,17 @@ object TypeClasses {
   }
 
   def Lazy(productArity: Int): String = {
-    // TODO: Generate all products in InvariantApplicativeFunctor
-    val lazyInstances = (1 to productArity).map { i =>
+    val lazyInstances = (1 until productArity).map { i =>
       val tparams = (1 to i).map(p => s"A$p").mkString(", ")
       val lparams = (1 to i).map(p => s"L$p <: String").mkString(", ")
       val lparams_ = (1 to i).map(p => s"L$p").mkString(", ")
-      val valueParams = (1 to i).map(p => s"v${p}: ValueOf[L$p]").mkString(", ")
-      val fieldNames = (1 to i).map(p => s"v${p}.value.toString").mkString(", ")
       val fEvidences = (1 to i).map(p => s"ev${p}: F[A${p}]")
+      val evidenceNames = (1 to i).map(p => s"ev${p}")
+      val untupled = (1 to i).map(p => s"a._${p}")
 
       s"""
-         |  implicit def deriveF1${i}[F[_], A, ${tparams}, ${lparams}](implicit f: InvariantApplicativeFunctor[F]): Lazy[F, CaseClass$i[A, $tparams, $lparams_]] = {
-         |     FieldNames.instance(List(${fieldNames}))
-         |  }
+         |implicit def deriveF${i}[F[_], A, ${tparams},${lparams}](implicit f: InvariantApplicativeFunctor[F], ${fEvidences.mkString(", ")}): Lazy[F, CaseClass${i}[A, ${tparams}, ${lparams_}]] =
+         |  instance(f.product${i}[${tparams}, CaseClass${i}[A, ${tparams}, ${lparams_}]]((${tparams.toLowerCase}) => CaseClass${i}(${tparams.toLowerCase}))(a => (${untupled.mkString(", ")}))(${evidenceNames.mkString(", ")}))
          |""".stripMargin
     }
 
@@ -102,8 +100,8 @@ object TypeClasses {
        |    def instance = fa
        |  }
        | // Derive any typeclass for CaseClass1
-       |  implicit def deriveF1[F[_], A, A1, L1 <: String](implicit f: InvariantApplicativeFunctor[F], ev: F[A1]): Lazy[F, CaseClass1[A, A1, L1]] =
-       |    instance(f.product1[A1, CaseClass1[A, A1, L1]](CaseClass1(_))(_._1)(ev))
+       |
+       |  ${lazyInstances.mkString("\n")}
        | }
        |""".stripMargin
   }

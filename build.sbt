@@ -4,7 +4,7 @@ organization := "com.fommil"
 
 name := "shapely"
 
-version := "0.1.3"
+version := "0.1.4"
 
 val product_arity = 64
 val sum_arity = 64
