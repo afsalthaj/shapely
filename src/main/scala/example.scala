@@ -17,9 +17,6 @@ package shapely {
 
       // Equal has InvariantAp
       implicit val eq: InvariantAp[Equal] = new InvariantAp[Equal] {
-        override def pure[A](a: A): Equal[A] =
-          instance(true)
-
         override def product1[A, B](f: A => B)(g: B => A)(fa: Equal[A]): Equal[B] =
           (a: B, b: B) => {
             val a1 = g(a)
