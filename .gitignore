@@ -1,3 +1,10 @@
+.bloop/
+.idea/
+.metals/
+.vscode/
+project/.bloop/
+project/metals.sbt
+project/project/
 .bsp/
 **/target/*
 !**/target/src_managed/
