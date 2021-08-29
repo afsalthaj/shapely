@@ -6,15 +6,20 @@ package shapely {
 
     object Equal {
       def apply[A](implicit ev: Equal[A]): Equal[A] = ev
-      def instance[A](bool: Boolean): Equal[A]      = (_: A, _: A) => bool
+
+      def instance[A](bool: Boolean): Equal[A] =
+        (_: A, _: A) => bool
 
       implicit val eqString: Equal[String] = (a: String, b: String) => a == b
-      implicit val eqINt: Equal[Int]       = (a: Int, b: Int) => a == b
+      implicit val eqInt: Equal[Int]       = (a: Int, b: Int) => a == b
       implicit val eqDouble: Equal[Double] = (a: Double, b: Double) => a == b
       implicit val eqLong: Equal[Long]     = (a: Long, b: Long) => a == b
 
-      implicit def eq: InvariantApplicativeFunctor[Equal] = new InvariantApplicativeFunctor[Equal] {
-        override def pure[A](a: A): Equal[A]                                      = instance(true)
+      // Equal has InvariantAp
+      implicit val eq: InvariantAp[Equal] = new InvariantAp[Equal] {
+        override def pure[A](a: A): Equal[A] =
+          instance(true)
+
         override def product1[A, B](f: A => B)(g: B => A)(fa: Equal[A]): Equal[B] =
           (a: B, b: B) => {
             val a1 = g(a)

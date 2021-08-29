@@ -31,7 +31,7 @@ object TypeClasses {
          """.stripMargin
   }
 
-  def InvariantApplicativeFunctor(productArity: Int): String = {
+  def InvariantAp(productArity: Int): String = {
     val products: Seq[String] = (4 to productArity).map { i =>
       val index = i - 1
       val indexMinus1 = index - 1
@@ -64,7 +64,7 @@ object TypeClasses {
     s"""
        |package shapely
        |
-       |trait InvariantApplicativeFunctor[F[_]] {
+       |trait InvariantAp[F[_]] {
        |  def pure[A](a: A): F[A]
        |  def product1[A, B](f: A => B)(g: B => A)(fa: F[A]): F[B]
        |  def product2[A, B, C](f: (A, B) => C)(g: C => (A, B))(fa: F[A], fb: F[B]): F[C]
@@ -83,7 +83,7 @@ object TypeClasses {
       val untupled = (1 to i).map(p => s"a._${p}")
 
       s"""
-         |implicit def deriveF${i}[F[_], A, ${tparams},${lparams}](implicit f: InvariantApplicativeFunctor[F], ${fEvidences.mkString(", ")}): Lazy[F, CaseClass${i}[A, ${tparams}, ${lparams_}]] =
+         |implicit def deriveF${i}[F[_], A, ${tparams},${lparams}](implicit f: InvariantAp[F], ${fEvidences.mkString(", ")}): Lazy[F, CaseClass${i}[A, ${tparams}, ${lparams_}]] =
          |  instance(f.product${i}[${tparams}, CaseClass${i}[A, ${tparams}, ${lparams_}]]((${tparams.toLowerCase}) => CaseClass${i}(${tparams.toLowerCase}))(a => (${untupled.mkString(", ")}))(${evidenceNames.mkString(", ")}))
          |""".stripMargin
     }
