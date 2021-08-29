@@ -145,7 +145,7 @@ sourceGenerators in Compile += Def.task {
 
   IO.write(
     lazyFile,
-    Lazy
+    Lazy(product_arity)
   )
 
   val Some((major, _)) = CrossVersion.partialVersion(scalaVersion.value)
