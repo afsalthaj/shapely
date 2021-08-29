@@ -31,21 +31,15 @@ object TypeClasses {
          """.stripMargin
   }
 
-  val InvariantApplicativeFunctor: String = {
-    val productArity = 30
-
+  def InvariantApplicativeFunctor(productArity: Int): String = {
     val products: Seq[String] = (4 to productArity).map { i =>
       val index = i - 1
       val indexMinus1 = index - 1
       val functionName = s"product${index}"
       val productTypes = (1 to i).map(p => s"A${p}")
-      val xproductTypes = (1 to index).map(p => s"x${p}")
-      val initXproductTypes = (1 to indexMinus1).map(p => s"x${p}")
       val initProductTypes = (1 to indexMinus1).map(p => s"A${p}").mkString(", ")
-      val initProductTypesNonString = (1 to indexMinus1).map(p => s"A${p}")
       val ptString = productTypes.mkString(", ")
       val ptStringWrapped = s"(${ptString})"
-      val ptStringWrappedLS = ptStringWrapped.toLowerCase()
       val functionInputs = s"(${productTypes.dropRight(1).mkString(", ")})"
       val functionOutput = productTypes.last
       val f1 = s"f: ${functionInputs} => ${functionOutput}"
@@ -56,11 +50,12 @@ object TypeClasses {
 
       s"""
          |  def ${functionName}[${productTypes.mkString(", ")}](${f1})(${f2})(${fs}): ${returnType} = {
-         |      val productx: F[(${initProductTypes})] = product${(1 to indexMinus1).size}[${initProductTypes}, (${initProductTypes})]((${initProductTypes.toLowerCase()}) => (${initProductTypes.toLowerCase()}))(x => x)(${fsi})
+         |      val productx: F[(${initProductTypes})] =
+         |        product${(1 to indexMinus1).size}[${initProductTypes}, (${initProductTypes})]((${initProductTypes.toLowerCase()}) => (${initProductTypes.toLowerCase()}))(x => x)(${fsi})
          |
          |      product2[(${initProductTypes}), A${index}, A${i}]({ case ((${initProductTypes.toLowerCase}), a${index}) => f(${initProductTypes.toLowerCase()}, a${index}) }) { a${i} =>
-         |        val (${xproductTypes.mkString(", ")}) = g(a${i})
-         |        ((${initXproductTypes.mkString(", ")}), x${index})
+         |        val (${(1 to index).map(p => s"x${p}").mkString(", ")}) = g(a${i})
+         |        ((${(1 to indexMinus1).map(p => s"x${p}").mkString(", ")}), x${index})
          |      }(productx, f${index})
          |    }
          |""".stripMargin

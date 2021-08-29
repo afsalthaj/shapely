@@ -138,7 +138,7 @@ sourceGenerators in Compile += Def.task {
 
   IO.write(
     invariantApplicativeFunctorFile,
-    InvariantApplicativeFunctor
+    InvariantApplicativeFunctor(product_arity)
   )
 
   val lazyFile = dir / "shapely" / "Lazy.scala"
