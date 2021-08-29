@@ -4,7 +4,7 @@ organization := "com.fommil"
 
 name := "shapely"
 
-version := "0.1.3"
+version := "0.1.4"
 
 val product_arity = 64
 val sum_arity = 64
@@ -134,11 +134,11 @@ sourceGenerators in Compile += Def.task {
     FieldNames(product_arity)
   )
 
-  val invariantApplicativeFunctorFile = dir / "shapely" / "InvariantApplicativeFunctor.scala"
+  val InvariantApFile = dir / "shapely" / "InvariantAp.scala"
 
   IO.write(
-    invariantApplicativeFunctorFile,
-    InvariantApplicativeFunctor(product_arity)
+    InvariantApFile,
+    InvariantAp(product_arity)
   )
 
   val lazyFile = dir / "shapely" / "Lazy.scala"
@@ -200,7 +200,7 @@ sourceGenerators in Compile += Def.task {
          |
          |}""".stripMargin)
 
-    Seq(fieldNamesFile, invariantApplicativeFunctorFile, lazyFile, compatFile)
+    Seq(fieldNamesFile, InvariantApFile, lazyFile, compatFile)
 
   }
 }.taskValue
