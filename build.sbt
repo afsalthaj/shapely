@@ -6,6 +6,8 @@ name := "shapely"
 
 version := "0.1.5"
 
+scalaVersion := "3.0.1"
+
 val product_arity = 64
 val sum_arity = 64
 
