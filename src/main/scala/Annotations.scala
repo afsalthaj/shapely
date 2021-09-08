@@ -4,8 +4,8 @@ import scala.quoted.*
 
 
   /**
-   * A typed list of annotations
-   * Allows user to not deal with `isInstanceOf`
+   * No way. That's wrong. But may be it would work. Good to just get a product of annotations
+   * and then Macros.annotationsOf[A].zipWith(Macros.annotationsOf[B]) in inline
    */
   final case class Annotation[A](v: A) {self =>
     def zipWith[B](annotation: Annotation[B]): Annotation[(A, B)] =
